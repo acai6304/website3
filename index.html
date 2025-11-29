@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Earth & Space Weather Live</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="script.js"></script>
+</head>
+<body>
+  <header>
+    <div class="branding">
+      <h1>Earth &amp; Space Weather Live</h1>
+      <p class="tagline">Real-time dashboard for quakes, storms, and solar activity</p>
+    </div>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="#overview" class="nav-link">Overview</a></li>
+        <li><a href="#earth" class="nav-link">Earth Mode</a></li>
+        <li><a href="#space" class="nav-link">Space Mode</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <img src="https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=1600&q=80" alt="Illustration of Earth and space weather activity">
+    <div class="hero-text">
+      <p>Track earthquakes, U.S. severe weather, solar flares, and geomagnetic activity in one live, minimal dashboard. Switch modes to focus on Earth or Space, or stay in Overview to see the combined picture.</p>
+    </div>
+  </section>
+
+  <main>
+    <section id="overview" class="section">
+      <div class="section-header">
+        <h2>Overview</h2>
+        <div class="mode-switch">
+          <button type="button" class="mode-btn" data-mode="overview">Overview Mode</button>
+          <button type="button" class="mode-btn" data-mode="earth">Earth Mode</button>
+          <button type="button" class="mode-btn" data-mode="space">Space Mode</button>
+        </div>
+      </div>
+      <p>This site brings together key signals from Earth and space. You can scan the summary table for today’s headline metrics, dive into the live feed for events as they arrive, or jump into Earth or Space mode for focused detail. Official data is sourced from <a href="https://www.noaa.gov/" target="_blank" rel="noopener">NOAA</a> and <a href="https://www.usgs.gov/" target="_blank" rel="noopener">USGS</a> feeds.</p>
+      <p>In Earth Mode you will see the latest earthquake list with magnitudes and times, plus current U.S. severe weather alerts. Use the filter to set a minimum magnitude and hide minor tremors. The dashboard will recalculate highlights like the largest quake and total alerts in real time.</p>
+      <p>In Space Mode you can check solar flare X-ray flux trends and the planetary Kp index that signals geomagnetic storm strength. Higher Kp values can mean auroras at lower latitudes; use the quick guide below to interpret the levels.</p>
+
+      <div class="summary-card">
+        <h3>Today’s Summary</h3>
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="summary-body">
+            <tr><td colspan="3">Loading summary...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="kp-guide">
+        <h3>Quick Guide: Kp Levels</h3>
+        <ul>
+          <li>Kp 0-2: Quiet geomagnetic conditions</li>
+          <li>Kp 3-4: Unsettled to active; minor fluctuations</li>
+          <li>Kp 5-6: Minor to moderate geomagnetic storming</li>
+          <li>Kp 7-9: Strong storming; auroras possible far south</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="earth" class="section">
+      <div class="section-header">
+        <h2>Earth Mode: Quakes &amp; Weather Alerts</h2>
+      </div>
+      <p>Earth Mode focuses on recent earthquakes and severe weather alerts across the United States. Magnitude and timing help you assess urgency, while weather alerts can guide preparedness for storms, floods, or other hazards.</p>
+
+      <div class="layout">
+        <div class="main-panel">
+          <div class="panel">
+            <h3>Latest Earthquakes</h3>
+            <ul id="earthquake-list" class="item-list">
+              <li>Loading earthquakes...</li>
+            </ul>
+          </div>
+
+          <div class="panel">
+            <h3>Active Weather Alerts (US)</h3>
+            <ul id="alert-list" class="item-list">
+              <li>Loading alerts...</li>
+            </ul>
+          </div>
+        </div>
+
+        <aside class="sidebar">
+          <div class="panel">
+            <h3>Filters</h3>
+            <form id="filters-form">
+              <label for="min-mag">Minimum Magnitude</label>
+              <input type="number" id="min-mag" name="minMag" min="0" max="10" step="0.1" value="0">
+
+              <label for="mode-select">Mode Focus</label>
+              <select id="mode-select" name="mode">
+                <option value="all">All</option>
+                <option value="earth">Earth</option>
+                <option value="space">Space</option>
+              </select>
+
+              <button type="submit">Apply Filters</button>
+            </form>
+          </div>
+
+          <div class="panel live-feed">
+            <h3>Live Feed</h3>
+            <div id="feed-container">
+              <ul id="feed-list"></ul>
+            </div>
+          </div>
+
+          <div class="panel error-box hidden" id="error-box">
+            <p id="error-message"></p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="space" class="section">
+      <div class="section-header">
+        <h2>Space Mode: Solar &amp; Geomagnetic Activity</h2>
+      </div>
+      <p>Space weather can influence satellite operations, radio communications, and power grids. Solar flares show up as spikes in X-ray flux, while the Kp index tracks geomagnetic disturbance levels over three-hour windows.</p>
+
+      <div class="layout">
+        <div class="main-panel">
+          <div class="panel">
+            <h3>Solar Flares (X-ray Flux)</h3>
+            <ul id="flare-list" class="item-list">
+              <li>Loading solar flare data...</li>
+            </ul>
+          </div>
+
+          <div class="panel">
+            <h3>Planetary Kp Index (Last 24h)</h3>
+            <ul id="kp-list" class="item-list">
+              <li>Loading Kp index...</li>
+            </ul>
+          </div>
+        </div>
+
+        <aside class="sidebar slim">
+          <div class="panel">
+            <h3>Interpreting Activity</h3>
+            <p>Watch for rising X-ray flux and Kp spikes: coordinated increases can hint at active space weather days. The live feed will surface notable spikes as they happen.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 Earth &amp; Space Weather Live. Data from NOAA &amp; USGS.</p>
+  </footer>
+</body>
+</html>
