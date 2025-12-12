@@ -4,7 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Earth & Space Weather Live</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
   <link rel="stylesheet" href="styles.css">
+  <script
+    defer
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  ></script>
   <script defer src="script.js"></script>
 </head>
 <body>
@@ -20,6 +28,9 @@
         <li><a href="#space" class="nav-link">Space Mode</a></li>
       </ul>
     </nav>
+    <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle color theme">
+      Light mode
+    </button>
   </header>
 
   <section class="hero">
@@ -33,15 +44,10 @@
     <section id="overview" class="section">
       <div class="section-header">
         <h2>Overview</h2>
-        <div class="mode-switch">
-          <button type="button" class="mode-btn" data-mode="overview">Overview Mode</button>
-          <button type="button" class="mode-btn" data-mode="earth">Earth Mode</button>
-          <button type="button" class="mode-btn" data-mode="space">Space Mode</button>
-        </div>
       </div>
       <p>This site brings together key signals from Earth and space. You can scan the summary table for today’s headline metrics, dive into the live feed for events as they arrive, or jump into Earth or Space mode for focused detail. Official data is sourced from <a href="https://www.noaa.gov/" target="_blank" rel="noopener">NOAA</a> and <a href="https://www.usgs.gov/" target="_blank" rel="noopener">USGS</a> feeds.</p>
       <p>In Earth Mode you will see the latest earthquake list with magnitudes and times, plus current U.S. severe weather alerts. Use the filter to set a minimum magnitude and hide minor tremors. The dashboard will recalculate highlights like the largest quake and total alerts in real time.</p>
-      <p>In Space Mode you can check solar flare X-ray flux trends and the planetary Kp index that signals geomagnetic storm strength. Higher Kp values can mean auroras at lower latitudes; use the quick guide below to interpret the levels.</p>
+      <p>In Space Mode you can check solar flare X-ray flux trends and a live aurora probability map powered by NOAA’s ovation model. Bright colors hint at higher chances of seeing aurora at those latitudes.</p>
 
       <div class="summary-card">
         <h3>Today’s Summary</h3>
@@ -59,15 +65,6 @@
         </table>
       </div>
 
-      <div class="kp-guide">
-        <h3>Quick Guide: Kp Levels</h3>
-        <ul>
-          <li>Kp 0-2: Quiet geomagnetic conditions</li>
-          <li>Kp 3-4: Unsettled to active; minor fluctuations</li>
-          <li>Kp 5-6: Minor to moderate geomagnetic storming</li>
-          <li>Kp 7-9: Strong storming; auroras possible far south</li>
-        </ul>
-      </div>
     </section>
 
     <section id="earth" class="section">
@@ -76,8 +73,92 @@
       </div>
       <p>Earth Mode focuses on recent earthquakes and severe weather alerts across the United States. Magnitude and timing help you assess urgency, while weather alerts can guide preparedness for storms, floods, or other hazards.</p>
 
+      <div class="controls-grid">
+        <div class="control-card">
+          <h4>Time window</h4>
+          <label><input type="radio" name="time-window" value="hour"> Past hour</label>
+          <label><input type="radio" name="time-window" value="day" checked> Past day</label>
+          <label><input type="radio" name="time-window" value="week"> Past week</label>
+        </div>
+        <div class="control-card">
+          <h4>Minimum magnitude</h4>
+          <input type="range" id="min-mag-range" min="0" max="8" step="0.1" value="0">
+          <div class="range-value">Current: <span id="min-mag-value">0.0</span></div>
+        </div>
+        <div class="control-card">
+          <h4>Sort by</h4>
+          <select id="sort-select">
+            <option value="recent" selected>Most recent</option>
+            <option value="magnitude">Magnitude</option>
+          </select>
+        </div>
+        <div class="control-card">
+          <h4>Options</h4>
+          <label><input type="checkbox" id="highlight-aftershocks"> Highlight aftershocks (M &lt; 3.5)</label>
+          <label><input type="checkbox" id="auto-refresh"> Auto-refresh every minute</label>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <p class="stat-label">Total quakes</p>
+          <p class="stat-value" id="stat-total">--</p>
+          <p class="stat-meta">Detected in selected window.</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Strongest quake</p>
+          <p class="stat-value" id="stat-strongest">--</p>
+          <p class="stat-meta" id="stat-strongest-meta">Awaiting data.</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-label">Average depth</p>
+          <p class="stat-value" id="stat-depth">--</p>
+          <p class="stat-meta">Depth below the surface (km).</p>
+        </div>
+      </div>
+
+      <div class="panel weather-panel" id="weather-panel">
+        <div class="panel-header">
+          <h3>Earth Weather Outlook</h3>
+          <p class="panel-sub">Search any region to check temperature, wind, UV, and cloud cover.</p>
+          <a id="weather-assistant-link" class="assistant-link" href="#" target="_blank" rel="noopener">Weather assistant</a>
+        </div>
+        <form id="weather-search-form" class="weather-search">
+          <input type="text" id="weather-query" name="query" placeholder="Search city, region, or coordinates (e.g., Fairbanks, Alaska)" required>
+          <button type="submit">Search</button>
+        </form>
+        <div class="weather-status" id="weather-status" aria-live="polite">Enter a location to load a forecast.</div>
+        <div class="weather-results hidden" id="weather-results">
+          <div class="weather-current">
+            <div>
+              <p class="weather-location" id="weather-location"></p>
+              <p class="weather-updated" id="weather-updated"></p>
+            </div>
+            <div class="weather-grid" id="weather-grid"></div>
+          </div>
+          <div class="weather-forecast">
+            <div class="panel-header">
+              <h4>Next 3 days</h4>
+              <p class="panel-sub">Cloud coverage helps gauge aurora visibility.</p>
+            </div>
+            <div class="forecast-cards" id="forecast-cards"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="layout">
         <div class="main-panel">
+          <div class="panel map-panel">
+            <div class="panel-header">
+              <h3>Live Map</h3>
+              <p class="panel-sub">Click a marker to see quake details.</p>
+            </div>
+            <div class="map-shell">
+              <div class="map-status" id="map-status">Loading map...</div>
+              <div id="map"></div>
+            </div>
+          </div>
+
           <div class="panel">
             <h3>Latest Earthquakes</h3>
             <ul id="earthquake-list" class="item-list">
@@ -85,8 +166,11 @@
             </ul>
           </div>
 
-          <div class="panel">
-            <h3>Active Weather Alerts (US)</h3>
+          <div class="panel alerts-strip">
+            <div class="panel-header">
+              <h3>Active Weather Alerts (US)</h3>
+              <p class="panel-sub">Scroll to scan current alerts.</p>
+            </div>
             <ul id="alert-list" class="item-list">
               <li>Loading alerts...</li>
             </ul>
@@ -104,8 +188,8 @@
               <select id="mode-select" name="mode">
                 <option value="all">All</option>
                 <option value="earth">Earth</option>
-                <option value="space">Space</option>
-              </select>
+              <option value="space">Space</option>
+            </select>
 
               <button type="submit">Apply Filters</button>
             </form>
@@ -129,29 +213,58 @@
       <div class="section-header">
         <h2>Space Mode: Solar &amp; Geomagnetic Activity</h2>
       </div>
-      <p>Space weather can influence satellite operations, radio communications, and power grids. Solar flares show up as spikes in X-ray flux, while the Kp index tracks geomagnetic disturbance levels over three-hour windows.</p>
+      <p>Space weather can influence satellite operations, radio communications, and power grids. Solar flares show up as spikes in X-ray flux, and the aurora map highlights where charged particles are most likely to light up the sky.</p>
 
       <div class="layout">
         <div class="main-panel">
           <div class="panel">
             <h3>Solar Flares (X-ray Flux)</h3>
-            <ul id="flare-list" class="item-list">
-              <li>Loading solar flare data...</li>
-            </ul>
-          </div>
-
-          <div class="panel">
-            <h3>Planetary Kp Index (Last 24h)</h3>
-            <ul id="kp-list" class="item-list">
-              <li>Loading Kp index...</li>
-            </ul>
+            <p class="panel-sub">Interactive heat bars on a log scale (A/B/C/M/X). Hover to sync with the list.</p>
+            <div class="chart-wrap flare-chart-wrap">
+              <canvas id="flare-chart" aria-label="Solar flare flux chart" role="img"></canvas>
+            </div>
+            <div class="flare-legend">
+              <div class="legend-item">
+                <span class="swatch swatch-x"></span>
+                <div>
+                  <strong>X-class</strong>
+                  <small>Major events, radio blackouts possible</small>
+                </div>
+              </div>
+              <div class="legend-item">
+                <span class="swatch swatch-m"></span>
+                <div>
+                  <strong>M-class</strong>
+                  <small>Moderate, auroras likely at higher latitudes</small>
+                </div>
+              </div>
+              <div class="legend-item">
+                <span class="swatch swatch-c"></span>
+                <div>
+                  <strong>C-class</strong>
+                  <small>Minor, routine background activity</small>
+                </div>
+              </div>
+              <div class="legend-item">
+                <span class="swatch swatch-b"></span>
+                <div>
+                  <strong>B/A-class</strong>
+                  <small>Quiet baseline</small>
+                </div>
+              </div>
+            </div>
+            <div class="list-scroll flare-list-scroll">
+              <ul id="flare-list" class="item-list">
+                <li>Loading solar flare data...</li>
+              </ul>
+            </div>
           </div>
         </div>
 
         <aside class="sidebar slim">
           <div class="panel">
             <h3>Interpreting Activity</h3>
-            <p>Watch for rising X-ray flux and Kp spikes: coordinated increases can hint at active space weather days. The live feed will surface notable spikes as they happen.</p>
+            <p>Watch for rising X-ray flux alongside brighter aurora probability patches: coordinated increases can hint at active space weather days. The live feed will surface notable spikes as they happen.</p>
           </div>
         </aside>
       </div>
